@@ -22,15 +22,31 @@ import stat
 from SystemConfiguration import SCDynamicStoreCreate, SCDynamicStoreCopyValue
 
 sys.path.append('/usr/local/munki')
-from munkilib import FoundationPlist
-from munkilib import munkicommon
-sys.path.append('/usr/local/sal')
-import utils
-import yaml
 
+try:
+    from munkilib import prefs
+    from munkilib import FoundationPlist
+    from munkilib import display
+except ImportError:
+    # Legacy support
+    try:
+        from munkilib import munkicommon as prefs
+        from munkilib import munkicommon as display
+        from munkilib import FoundationPlist
+    except ImportError, msg:
+        print "%s" % msg
+        exit(1)
+
+sys.path.append('/usr/local/sal')
+try:
+    import utils
+    import yaml
+except ImportError, msg:
+        print "%s" % msg
+        exit(1)
 
 BUNDLE_ID = 'com.github.salopensource.sal'
-VERSION = '2.0.3'
+VERSION = '2.1.0'
 
 # To resolve unicode write errors set our default encoding to utf8
 reload(sys)
@@ -87,7 +103,7 @@ def main():
 def set_verbosity():
     """Set the verbosity based on options or munki verbosity level."""
     opts = get_options()
-    munkicommon.verbose = (
+    display.verbose = (
         5 if opts.debug else int(os.environ.get('MUNKI_VERBOSITY_LEVEL', 0)))
 
 
@@ -139,13 +155,13 @@ def get_managed_install_report():
         dict, or an empty dict.
     """
     # Checks munki preferences to see where the install directory is set to.
-    managed_install_dir = munkicommon.pref('ManagedInstallDir')
+    managed_install_dir = prefs.pref('ManagedInstallDir')
 
     # set the paths based on munki's configuration.
     managed_install_report = os.path.join(
         managed_install_dir, 'ManagedInstallReport.plist')
 
-    munkicommon.display_debug2(
+    display.display_debug2(
         "Looking for munki's ManagedInstallReport.plist at {} ...".format(
             managed_install_report))
     try:
@@ -156,8 +172,8 @@ def get_managed_install_report():
     if 'MachineInfo' not in munki_report:
         munki_report['MachineInfo'] = {}
 
-    munkicommon.display_debug2('ManagedInstallReport.plist:')
-    munkicommon.display_debug2(format_plist(munki_report))
+    display.display_debug2('ManagedInstallReport.plist:')
+    display.display_debug2(format_plist(munki_report))
 
     return munki_report
 
@@ -168,13 +184,13 @@ def get_plugin_results(plugin_results_plist):
     if os.path.exists(plugin_results_plist):
         try:
             plist_data = FoundationPlist.readPlist(plugin_results_plist)
-            munkicommon.display_debug2('External data plist:')
-            munkicommon.display_debug2(format_plist(plist_data))
+            display.display_debug2('External data plist:')
+            display.display_debug2(format_plist(plist_data))
             result = plist_data
         except FoundationPlist.NSPropertyListSerializationException:
-            munkicommon.display_debug2('Could not read external data plist.')
+            display.display_debug2('Could not read external data plist.')
     else:
-        munkicommon.display_debug2('No external data plist found.')
+        display.display_debug2('No external data plist found.')
 
     return result
 
@@ -207,9 +223,9 @@ def get_sys_profile():
         except FoundationPlist.FoundationPlistException:
             pass
 
-        munkicommon.display_debug2(
+        display.display_debug2(
             'System Profiler SPNetworkDataType and SPHardwareDataType:')
-        munkicommon.display_debug2(format_plist(system_profile))
+        display.display_debug2(format_plist(system_profile))
 
     return system_profile
 
@@ -231,11 +247,11 @@ def puppet_vers():
             command = [puppet_path, '--version']
             puppet_version = subprocess.check_output(command).strip()
         except subprocess.CalledProcessError as error:
-            munkicommon.display_debug2('Issue getting puppet version')
-            munkicommon.display_debug2(error.message)
+            display.display_debug2('Issue getting puppet version')
+            display.display_debug2(error.message)
             puppet_version = "Not Found"
 
-    munkicommon.display_debug2('Puppet Version: {}'.format(puppet_version))
+    display.display_debug2('Puppet Version: {}'.format(puppet_version))
 
     return puppet_version
 
@@ -264,8 +280,8 @@ def get_puppet_report():
         if puppetreport['version']['config'] is None:
             puppetreport['version']['config'] = 'None'
 
-        munkicommon.display_debug2('Puppet Report:')
-        munkicommon.display_debug2(pformat(puppetreport))
+        display.display_debug2('Puppet Report:')
+        display.display_debug2(pformat(puppetreport))
 
     return puppetreport
 
@@ -278,8 +294,8 @@ def get_ohai_report():
         try:
             report = subprocess.check_output(command)
         except subprocess.CalledProcessError as error:
-            munkicommon.display_debug2('Issue getting ohai report:')
-            munkicommon.display_debug2(error.message)
+            display.display_debug2('Issue getting ohai report:')
+            display.display_debug2(error.message)
 
     ohai = {}
     if report:
@@ -294,8 +310,8 @@ def get_ohai_report():
             nullify(ohai)
         except:
             pass
-    munkicommon.display_debug2('Ohai Output:')
-    munkicommon.display_debug2(pformat(ohai))
+    display.display_debug2('Ohai Output:')
+    display.display_debug2(pformat(ohai))
 
     return hashrocket_flatten_dict(ohai)
 
@@ -337,8 +353,8 @@ def get_facter_report():
         try:
             report = subprocess.check_output(command)
         except subprocess.CalledProcessError as error:
-            munkicommon.display_debug2('Issue getting facter report:')
-            munkicommon.display_debug2(error.message)
+            display.display_debug2('Issue getting facter report:')
+            display.display_debug2(error.message)
 
     facter = {}
     if report:
@@ -348,8 +364,8 @@ def get_facter_report():
             pass
     if 'values' in facter:
         facter = facter['values']
-    munkicommon.display_debug2('Facter Output:')
-    munkicommon.display_debug2(pformat(facter))
+    display.display_debug2('Facter Output:')
+    display.display_debug2(pformat(facter))
 
     if facterflag:
         # restore pre-run facterlib
@@ -420,7 +436,7 @@ def get_disk_size(path='/'):
     try:
         st = os.statvfs(path)
     except OSError, e:
-        munkicommon.display_error(
+        display.display_error(
             'Error getting disk space in %s: %s', path, str(e))
         return 0
     total = (st.f_blocks * st.f_frsize) / 1024
@@ -432,7 +448,7 @@ def sub_format_plist(plist):
     try:
         data = FoundationPlist.writePlistToString(plist)
     except FoundationPlist.NSPropertyListSerializationException as error:
-        munkicommon.display_debug2(
+        display.display_debug2(
             "Error serializing generated report: {}".format(error.message))
         data = ""
 
@@ -448,17 +464,17 @@ def send_report(url, report):
     encoded_data = urllib.urlencode(report)
     stdout, stderr = utils.curl(url, encoded_data)
     if stderr:
-        munkicommon.display_debug2(stderr)
+        display.display_debug2(stderr)
     stdout_list = stdout.split("\n")
     if "<h1>Page not found</h1>" not in stdout_list:
-        munkicommon.display_debug2(stdout)
+        display.display_debug2(stdout)
     return stdout, stderr
 
 
 def send_checkin(ServerURL, checkin_data, report):
     checkinurl = os.path.join(ServerURL, 'checkin', '')
     checkin_data['base64bz2report'] = sub_format_plist(report)
-    munkicommon.display_debug2("Checkin Response:")
+    display.display_debug2("Checkin Response:")
     send_report(checkinurl, checkin_data)
 
 
@@ -466,10 +482,10 @@ def send_hashed(ServerURL, hashed_data):
     hashurl = os.path.join(
         ServerURL, 'inventory/hash', hashed_data['serial'], '')
     inventorysubmiturl = os.path.join(ServerURL, 'inventory/submit', '')
-    managed_install_dir = munkicommon.pref('ManagedInstallDir')
+    managed_install_dir = prefs.pref('ManagedInstallDir')
     inventoryplist = os.path.join(
         managed_install_dir, 'ApplicationInventory.plist')
-    munkicommon.display_debug2(
+    display.display_debug2(
         'ApplicationInventory.plist Path: {}'.format(inventoryplist))
     inventory, inventory_hash = utils.get_file_and_hash(inventoryplist)
     if inventory:
@@ -480,7 +496,7 @@ def send_hashed(ServerURL, hashed_data):
         if serverhash != inventory_hash:
             hashed_data['base64bz2inventory'] = (
                 base64.b64encode(bz2.compress(inventory)))
-            munkicommon.display_debug2("Hashed Report Response:")
+            display.display_debug2("Hashed Report Response:")
             send_report(inventorysubmiturl, hashed_data)
 
 
@@ -492,7 +508,7 @@ def send_install(ServerURL, install_data):
         '')
     install_log_submit_url = os.path.join(ServerURL, 'installlog/submit', '')
 
-    managed_install_dir = munkicommon.pref('ManagedInstallDir')
+    managed_install_dir = prefs.pref('ManagedInstallDir')
     install_log = os.path.join(managed_install_dir, 'Logs', 'Install.log')
     install_log_text, install_log_hash = utils.get_file_and_hash(install_log)
 
@@ -502,7 +518,7 @@ def send_install(ServerURL, install_data):
         if server_hash != install_log_hash and stderr is None:
             install_data['base64bz2installlog'] = (
                 base64.b64encode(bz2.compress(install_log_text)))
-            munkicommon.display_debug2("Install.log Response:")
+            display.display_debug2("Install.log Response:")
             send_report(install_log_submit_url, install_data)
 
 
@@ -520,11 +536,11 @@ def run_external_scripts(runtype):
                                         runtype],
                                         stdin=None)
                     except OSError:
-                        munkicommon.display_debug2(
+                        display.display_debug2(
                             "Couldn't run %s") % os.path.join(root, script)
                 else:
                     script_path = os.path.join(root, script)
-                    munkicommon.display_debug1(
+                    display.display_debug1(
                         "{0} is not executable or has bad permissions..".format(
                             script_path))
 
@@ -532,7 +548,7 @@ def run_external_scripts(runtype):
 def send_catalogs(ServerURL, catalog_data):
     hashurl = os.path.join(ServerURL, 'catalog/hash', '')
     catalogsubmiturl = os.path.join(ServerURL, 'catalog/submit', '')
-    managed_install_dir = munkicommon.pref('ManagedInstallDir')
+    managed_install_dir = prefs.pref('ManagedInstallDir')
     catalog_dir = os.path.join(managed_install_dir, 'catalogs')
 
     check_list = []
@@ -569,7 +585,7 @@ def send_catalogs(ServerURL, catalog_data):
                 catalog_data['name'] = catalog['name']
                 catalog_data['sha256hash'] = catalog['sha256hash']
 
-                munkicommon.display_debug2(
+                display.display_debug2(
                     "Submitting Catalog: {}".format(catalog['name']))
                 send_report(catalogsubmiturl, catalog_data)
 

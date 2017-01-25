@@ -61,15 +61,15 @@ def get_checksum():
     stdout, stderr = utils.curl(preflight_url)
 
     if stderr:
-        munkicommon.display_debug2(stderr)
+        display.display_debug2(stderr)
     stdout_list = stdout.split("\n")
     if "<h1>Page not found</h1>" not in stdout_list:
-        munkicommon.display_debug2(stdout)
+        display.display_debug2(stdout)
 
     try:
         return json.loads(stdout)
     except:
-        munkicommon.display_debug2('Didn\'t receive valid JSON.')
+        display.display_debug2('Didn\'t receive valid JSON.')
         return None
 
 def download_scripts(server_scripts):
@@ -87,7 +87,7 @@ def download_scripts(server_scripts):
                 download_required = True
 
         if download_required == True:
-            munkicommon.display_debug2('downloading %s' % server_script['filename'])
+            display.display_debug2('downloading %s' % server_script['filename'])
             download_and_write_script(server_script)
 
 def download_and_write_script(server_script):
@@ -97,14 +97,14 @@ def download_and_write_script(server_script):
     script_url = "%s/preflight-v2/get-script/%s/%s/" % (SERVER_URL, server_script['plugin'], server_script['filename'])
     stdout, stderr = utils.curl(script_url)
     if stderr:
-        munkicommon.display_debug2('Error received downloading script:')
-        munkicommon.display_debug2(stderr)
+        display.display_debug2('Error received downloading script:')
+        display.display_debug2(stderr)
 
     script = open (os.path.join(EXTERNAL_SCRIPTS_DIR, server_script['plugin'], server_script['filename']), 'w')
     try:
         data = json.loads(stdout)
     except:
-        munkicommon.display_debug2('Did not receive valid JSON when requesting script content.')
+        display.display_debug2('Did not receive valid JSON when requesting script content.')
         return False
 
     script.write(data[0]['content'])
