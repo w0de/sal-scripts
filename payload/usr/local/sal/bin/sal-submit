@@ -44,10 +44,11 @@ sys.setdefaultencoding('utf8')
 def main():
     set_verbosity()
     exit_if_not_root()
+    opts = get_options()
     other_sal_pid = utils.pythonScriptRunning('sal-submit')
     if other_sal_pid:
         sys.exit('Another instance of sal-submit is already running. Exiting.')
-    
+
     time.sleep(1)
     munki_pid = utils.pythonScriptRunning('managedsoftwareupdate')
     if munki_pid:
@@ -114,7 +115,10 @@ def main():
         send_install(ServerURL, copy.copy(submission))
         send_catalogs(ServerURL, copy.copy(submission))
         send_profiles(ServerURL, copy.copy(submission))
-    
+
+    if opts.raw_output:
+        print {'report': report, 'submission': submission}
+
     touchfile = '/Users/Shared/.com.salopensource.sal.run'
     if os.path.exists(touchfile):
         os.remove(touchfile)
@@ -134,6 +138,10 @@ def get_options():
     option_parser.add_option(
         "-d", "--debug", default=False, action="store_true",
         help="Enable debug output.")
+    option_parser.add_option(
+        "-o", "--raw-output", default=False, action="store_true",
+        help="Emable raw output of submission & report"
+    )
     # We have no arguments, so don't store the results.
     opts, _ = option_parser.parse_args()
     return opts
